@@ -39,8 +39,8 @@ static void i2c_slave_init(void) {
     i2cSlave.mode = I2C_MODE_SLAVE;
     i2cSlave.slave.slave_addr = I2C_ADDR;
     i2cSlave.slave.addr_10bit_en = 0;
-    i2cSlave.scl_io_num = 19;
-    i2cSlave.sda_io_num = 18;
+    i2cSlave.scl_io_num = 22;
+    i2cSlave.sda_io_num = 21;
     i2cSlave.sda_pullup_en = GPIO_PULLUP_DISABLE;
     i2cSlave.scl_pullup_en = GPIO_PULLUP_DISABLE;
     
@@ -178,12 +178,17 @@ void app_main() {
     i2c_slave_init();
     while(1) {
         int i2cLen= i2c_slave_read_buffer(I2C_NUM_0, i2cdata, 5, 1000 / portTICK_PERIOD_MS);
-        if (i2cLen != ESP_FAIL) {
-            NMEA0183WindSentence(nmeastr, 
-            (uint16_t)(i2cdata[0] << 8 | i2cdata[1]),
-            i2cdata[3]);
-            printf(nmeastr);
-        } else
+        if (i2cLen == ESP_FAIL) {
             ESP_LOGE(TAG, "Failed to read from I2C!");
+            continue;
+        }
+        if (i2cLen != 5) {
+            ESP_LOGI(TAG, "Inconsistent I2C read: %d bytes, not 5", i2cLen);
+            continue;
+        }
+        NMEA0183WindSentence(nmeastr, 
+        (uint16_t)(i2cdata[0] << 8 | i2cdata[1]),
+        i2cdata[3]);
+        printf(nmeastr);
     }
 }
