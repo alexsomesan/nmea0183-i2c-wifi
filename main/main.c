@@ -15,11 +15,12 @@
 #define NMEA_QUEUE_DEPTH 50
 
 const char *TAG = "nmea0183-wifi-i2c";
+uint networkOn = 0;
 
-esp_err_t my_custom_handler(httpd_req_t *req);
+esp_err_t my_custom_handler(httpd_req_t *);
+void cb_connection_ok(void *);
 
 void app_main() {
-
     TaskHandle_t xI2CReceiveHandle = NULL;
     TaskHandle_t xNMEASenderHandle = NULL;
 
@@ -29,7 +30,13 @@ void app_main() {
     );
     
     wifi_manager_start();
-    http_app_set_handler_hook(HTTP_GET, &my_custom_handler);
+    wifi_manager_set_callback(WM_EVENT_STA_GOT_IP, &cb_connection_ok);
+    
+    // http_app_set_handler_hook(HTTP_GET, &my_custom_handler);
+
+    while(networkOn == 0) {
+        vTaskDelay(portTICK_PERIOD_MS);
+    }
 
     xTaskCreate(vTaskI2CReceive, "I2C-RECEIVER", 2048, 
         xNMEAQueue, tskIDLE_PRIORITY, &xI2CReceiveHandle);
@@ -46,4 +53,9 @@ void app_main() {
         vTaskDelay(portTICK_PERIOD_MS);
     }
     ESP_LOGE(TAG, "END OF MAIN");
+}
+
+void cb_connection_ok(void *p) {
+	ESP_LOGI(TAG, "I have a connection!");
+    networkOn = 1;
 }
